@@ -1,62 +1,63 @@
-import java.net.*; 
-import java.io.*; 
-  
-public class Server extends Thread
-{ 
-    //initialize socket and input stream 
-    private Socket          socket   = null; 
-    private ServerSocket    server   = null; 
-    private DataInputStream in       =  null; 
-  
-    // constructor with port 
-    public Server(int port) 
-    { 
-        // starts server and waits for a connection 
-        try
-        { 
-            server = new ServerSocket(port); 
-            System.out.println("Server started"); 
-  
-            System.out.println("Waiting for a client ..."); 
-            
-            while(!socket.isClosed()) {
-            	socket = server.accept();
-            	System.out.println("Client accepted");
-            	
-            	
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.io.IOException;
+
+public class Server implements Runnable{
+
+    protected int          serverPort   = 8080;
+    protected ServerSocket serverSocket = null;
+    protected boolean      isStopped    = false;
+    protected Thread       runningThread= null;
+
+    public Server(int port){
+        this.serverPort = port;
+    }
+
+    public void run(){
+        synchronized(this){
+            this.runningThread = Thread.currentThread();
+        }
+        openServerSocket();
+        while(! isStopped()){
+            Socket clientSocket = null;
+            try {
+                clientSocket = this.serverSocket.accept();
+            } catch (IOException e) {
+                if(isStopped()) {
+                    System.out.println("Server Stopped.") ;
+                    return;
+                }
+                throw new RuntimeException(
+                    "Error accepting client connection", e);
             }
-             
-             
-  
-            // takes input from the client socket 
-            in = new DataInputStream( 
-                new BufferedInputStream(socket.getInputStream())); 
-  
-            String line = ""; 
-  
-            // reads message from client until "Over" is sent 
-            while (!line.equals("Over")) 
-            { 
-                try
-                { 
-                    line = in.readUTF(); 
-                    System.out.println(line); 
-  
-                } 
-                catch(IOException i) 
-                { 
-                    System.out.println(i); 
-                } 
-            } 
-            System.out.println("Closing connection"); 
-  
-            // close connection 
-            socket.close(); 
-            in.close(); 
-        } 
-        catch(IOException i) 
-        { 
-            System.out.println(i); 
-        } 
-    } 
-} 
+            new Thread(
+                new WorkerThread(
+                    clientSocket, "Multithreaded Server")
+            ).start();
+        }
+        System.out.println("Server Stopped.") ;
+    }
+
+
+    private synchronized boolean isStopped() {
+        return this.isStopped;
+    }
+
+    public synchronized void stop(){
+        this.isStopped = true;
+        try {
+            this.serverSocket.close();
+        } catch (IOException e) {
+            throw new RuntimeException("Error closing server", e);
+        }
+    }
+
+    private void openServerSocket() {
+        try {
+            this.serverSocket = new ServerSocket(this.serverPort);
+        } catch (IOException e) {
+            throw new RuntimeException("Cannot open port 8080", e);
+        }
+    }
+
+}
