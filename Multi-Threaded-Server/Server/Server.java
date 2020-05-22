@@ -1,7 +1,7 @@
 import java.net.*; 
 import java.io.*; 
   
-public class Server 
+public class Server extends Thread
 { 
     //initialize socket and input stream 
     private Socket          socket   = null; 
@@ -18,9 +18,15 @@ public class Server
             System.out.println("Server started"); 
   
             System.out.println("Waiting for a client ..."); 
-  
-            socket = server.accept(); 
-            System.out.println("Client accepted"); 
+            
+            while(!socket.isClosed()) {
+            	socket = server.accept();
+            	System.out.println("Client accepted");
+            	
+            	
+            }
+             
+             
   
             // takes input from the client socket 
             in = new DataInputStream( 
@@ -53,7 +59,4 @@ public class Server
             System.out.println(i); 
         } 
     } 
-  public static void main(String[] args) {
-	  Server s = new Server(5454);
-  }
 } 
